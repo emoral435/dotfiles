@@ -2,6 +2,7 @@
 {
   # Determinate already manages the Nix daemon, so nix-darwin shouldn't.
   nix.enable = false;
+  environment.variables.EDITOR = "vim";
   nixpkgs.config.allowUnfree = true;
   nixpkgs.hostPlatform = "aarch64-darwin"; # use x86_64-darwin for Intel CPU
   system.primaryUser = user;
@@ -22,7 +23,7 @@
       wvous-br-corner = 4;
     };
     finder.FXPreferredViewStyle = "Nlsv";  # list view by default
-   finder.CreateDesktop = false;          # clean desktop
+    finder.CreateDesktop = false;          # clean desktop
     trackpad.Clicking = true;              # tap to click
   };
   nix-homebrew = {
