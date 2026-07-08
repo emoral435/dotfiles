@@ -59,6 +59,7 @@
       "spotify" # Gotta listen to my music
       "visual-studio-code" # My main 'IDE', but moreso my main text editor
       "notion" # Where I love to take notes
+      # NOTE: you want to also ENABLE Mac to allow Rectangle to move around other apps. You can enable this via Privacy & Settins -> Accessibility -> enable Rectangle
       "rectangle" # What I use to manage my windows around the screen - super helpful, and it is what I have gotten used too
       "todoist-app" # What I use to manage my tasks
     ];
