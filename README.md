@@ -15,6 +15,7 @@ Me setup consists of the following:
 * Dock layout (managed manually via `bin/set-dock.sh`)
 * Desktop wallpapers per monitor (managed manually via `bin/set-wallpapers.sh`)
 * Agent configs (global AGENTS.md)
+* Reef (window manager, auto-installed from GitHub release)
 
 ## Prerequisites
 
@@ -127,7 +128,7 @@ Read through `brews` and `casks` before you run `bootstrap.sh` or `rebuild.sh` f
 
 - `flake.nix` - the entry point.
   Wires up nixpkgs, nix-darwin, home-manager, and nix-homebrew, and declares the `mac` machine.
-- `configuration.nix` - system-level config: macOS defaults, Homebrew.
+- `configuration.nix` - system-level config: macOS defaults, Homebrew, Reef auto-install and login item setup.
 - `home.nix` - user-level config: shell, packages, prompt, and the symlinks described below.
 - `rebuild.sh` - re-applies the config after the first switch.
   Run this every time you make a change.
