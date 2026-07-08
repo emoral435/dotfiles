@@ -1,0 +1,11 @@
+// Place your key bindings in this file to override the defaultsauto[]
+[
+    {
+        "key": "ctrl+cmd+z",
+        "command": "editor.emmet.action.wrapWithAbbreviation"
+    },
+    {
+        "key": "ctrl+cmd+k",
+        "command": "editor.emmet.action.removeTag"
+    }
+]

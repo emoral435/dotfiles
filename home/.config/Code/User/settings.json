@@ -1,0 +1,30 @@
+{
+    "editor.minimap.enabled": false,
+    "editor.stickyScroll.enabled": false,
+    "editor.tabSize": 2,
+    "workbench.settings.applyToAllProfiles": ["workbench.colorCustomizations"],
+    "terminal.integrated.fontFamily": "monospace",
+    "editor.fontFamily": "'JetbrainsMono Nerd Font', Menlo, Monaco, 'Courier New', monospace",
+    "workbench.colorCustomizations": {
+        "terminal.background": "#00000000"
+    },
+    "workbench.iconTheme": "catppuccin-macchiato",
+    "editor.padding.top": 16,
+    "tabnine.experimentalAutoImports": true,
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "remote.autoForwardPortsSource": "hybrid",
+    "vsicons.dontShowNewVersionMessage": true,
+    "window.zoomLevel": 1,
+    "workbench.sideBar.location": "left",
+    "chat.commandCenter.enabled": false,
+    "go.toolsManagement.autoUpdate": true,
+    "security.workspace.trust.untrustedFiles": "open",
+    "mdb.mcp.server": "prompt",
+    "workbench.activityBar.location": "top",
+    "haskell.manageHLS": "GHCup",
+    "workbench.colorTheme": "GitHub Dark Dimmed",
+    "explorer.confirmDelete": false,
+    "go.lintFlags": [
+        "[\"-c\", \"${workspaceFolder}/.golangci.yml\", \"--issues-exit-code=0\"]"
+    ]
+}

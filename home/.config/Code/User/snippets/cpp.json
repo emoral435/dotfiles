@@ -1,0 +1,37 @@
+{
+    "cpp basic snippet":
+    {
+        "prefix" : "cpp",
+                   "body" : [
+                       "#include<iostream>",
+                       "using namespace std;",
+                       "int main()",
+                       "{",
+                       "    return 0;",
+                       "}"
+  
+                   ],
+                            "description" : "to produce the main snippet for cpp"
+    },
+    "cpp module snippet":
+    {
+        "prefix" : "cppModule",
+                   "body" : [
+                       "#ifndef MODULE_H",
+                       "#define MODULE_H",
+                       "",
+                       "#include<iostream>",
+                       "",
+                       "using namespace std;",
+                       "",
+                       "int main()",
+                       "{",
+                       "    return 0;",
+                       "}",
+                       "",
+                       "#endif"
+  
+                   ],
+                            "description" : "to produce the main snippet for cpp"
+    },
+}
