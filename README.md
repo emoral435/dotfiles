@@ -11,7 +11,8 @@ Me setup consists of the following:
 * Homebrew apps (casks and CLI tools, make sure to check if you are okay with downloading these)
 * Nix user packages (ripgrep, fd, fzf, jq, lazygit, Hack Nerd Font)
 * Shell (oh-my-zsh, powerlevel10k prompt, aliases)
-* Editor (VSCode config)
+* Editor (Neovim + VSCode config)
+* Neovim is the default editor -- nice things like no blinking cursor in normal mode
 * Dock layout (managed manually via `bin/set-dock.sh`)
 * Desktop wallpapers per monitor (managed manually via `bin/set-wallpapers.sh`)
 * Agent configs (global AGENTS.md)
@@ -136,7 +137,7 @@ Read through `brews` and `casks` before you run `bootstrap.sh` or `rebuild.sh` f
   Run it when you add or remove a dockable app from `brews`/`casks`.
 - `bin/set-wallpapers.sh` - one-off script to set wallpapers per display.
   Run it after dropping your images into `home/.config/wallpapers/`.
-- `home/` - the actual config files that get symlinked into place (Ghostty config, VSCode settings, zsh/powerlevel10k, wallpapers, global `AGENTS.md`).
+- `home/` - the actual config files that get symlinked into place (Ghostty config, Neovim config, VSCode settings, zsh/powerlevel10k, wallpapers, global `AGENTS.md`).
 
 ## How the symlinks work
 
@@ -151,6 +152,7 @@ The files under `home/` are the real files - editing them here is editing your l
 | `~/Library/Application Support/Code/User/snippets` | `home/.config/Code/User/snippets` |
 | `~/.zshrc` | `home/.config/zsh/.zshrc` |
 | `~/.p10k.zsh` | `home/.config/zsh/.p10k.zsh` |
+| `~/.config/nvim` | `home/.config/nvim` |
 
 You only run `./rebuild.sh` when you change something that isn't just a symlinked file, like a package list or a system default.
 

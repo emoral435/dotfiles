@@ -82,6 +82,8 @@ plugins=(git zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
+unalias nvim 2>/dev/null   # drop any stale alias so the nix-installed nvim is found
+
 export PATH=~/anaconda3/bin:$PATH
 # export PATH="/anaconda3/bin:$PATH"  # commented out by conda initialize
 
@@ -93,7 +95,7 @@ export PATH=~/anaconda3/bin:$PATH
 # export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
-export EDITOR='vim'
+export EDITOR='nvim'
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
@@ -104,7 +106,7 @@ export EDITOR='vim'
 # For a full list of active aliases, run `alias`.
 
 alias k="kubectl"
-alias vzsh="vim ~/.zshrc"
+alias nzsh="nvim ~/.zshrc"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh

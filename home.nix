@@ -10,6 +10,7 @@ in
     # cli i use constantly
     ripgrep   # fast search
     lazygit
+    neovim
     treehouse.packages.${pkgs.system}.default
     # the font everything renders in
     nerd-fonts.hack
@@ -24,8 +25,10 @@ in
   #   config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/wezterm";
 
   # Ghostty terminal
-  home.file."Library/Application Support/com.mitchellh.ghostty/config".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/ghostty/config";
+  home.file."Library/Application Support/com.mitchellh.ghostty/config" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/ghostty/config";
+    force = true;
+  };
 
   # VSCode
   home.file."Library/Application Support/Code/User/settings.json".source =
@@ -36,6 +39,12 @@ in
   };
   home.file."Library/Application Support/Code/User/snippets" = {
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/snippets";
+    force = true;
+  };
+
+  # Neovim
+  home.file.".config/nvim" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/nvim";
     force = true;
   };
 
