@@ -2,6 +2,7 @@
 {
   # Determinate already manages the Nix daemon, so nix-darwin shouldn't.
   nix.enable = false;
+  environment.variables.EDITOR = "vim";
   nixpkgs.config.allowUnfree = true;
   nixpkgs.hostPlatform = "aarch64-darwin"; # use x86_64-darwin for Intel CPU
   system.primaryUser = user;
@@ -46,13 +47,9 @@
       "hugo"         # Static site generator
       "jq"           # JSON CLI processor
       "lefthook"     # Git hooks manager
-      "node@16"      # Node.js 16
       "node"         # Node.js (current)
-      "python@3.11"  # Python 3.11
-      "python@3.13"  # Python 3.13
-      "python@3.14"  # Python 3.14
+      "python@3.14"
       "ripgrep"      # Fast file search (also installed via Nix pkgs)
-      "terraform"    # Infrastructure as code
       "tmux"         # Terminal multiplexer
     ];
     casks = [
@@ -66,4 +63,30 @@
       "todoist-app" # What I use to manage my tasks
     ];
   };
+  system.activationScripts.rectangleSettings.text = ''
+    sudo -u ${user} defaults write com.knollsoft.Rectangle alternateDefaultShortcuts -bool false
+  '';
+
+  # Reef is installed from a GitHub release zip (no Homebrew cask yet)
+  system.activationScripts.reefInstall.text = ''
+    if [ ! -d "/Applications/Reef.app" ]; then
+      echo "Installing Reef from GitHub release..."
+      LATEST_URL="https://github.com/gouwsxander/Reef/releases/latest/download/Reef.zip"
+      curl -fsSL -o /tmp/reef.zip "$LATEST_URL"
+      unzip -q /tmp/reef.zip -d /Applications/
+      chown -R "$(stat -f '%Su' /dev/console):staff" /Applications/Reef.app
+      rm /tmp/reef.zip
+    fi
+
+    # Ensure Reef is in login items
+    LOGIN_ITEMS=$(sudo -u ${user} osascript -e 'tell application "System Events" to get name of every login item' 2>/dev/null)
+    if ! echo "$LOGIN_ITEMS" | grep -q "Reef"; then
+      sudo -u ${user} osascript -e 'tell application "System Events" to make new login item with properties {name:"Reef", path:"/Applications/Reef.app", hidden:false}'
+    fi
+
+    # Restore Reef preferences from dotfiles if available
+    if [ -f "/Users/${user}/.config/reef/preferences.plist" ]; then
+      sudo -u ${user} defaults import xandergouws.Reef "/Users/${user}/.config/reef/preferences.plist"
+    fi
+  '';
 }

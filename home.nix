@@ -1,4 +1,4 @@
-{ config, pkgs, user, ... }:
+{ config, pkgs, user, treehouse, ... }:
 let
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
 in
@@ -10,6 +10,7 @@ in
     # cli i use constantly
     ripgrep   # fast search
     lazygit
+    treehouse.packages.${pkgs.system}.default
     # the font everything renders in
     nerd-fonts.hack
   ];

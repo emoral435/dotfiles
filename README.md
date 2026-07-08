@@ -9,12 +9,13 @@ Me setup consists of the following:
 
 * System settings (dark mode, key repeat, dock, Finder, trackpad)
 * Homebrew apps (casks and CLI tools, make sure to check if you are okay with downloading these)
-* Nix user packages (ripgrep, fd, fzf, jq, lazygit, Neovim, Hack Nerd Font)
+* Nix user packages (ripgrep, fd, fzf, jq, lazygit, Hack Nerd Font)
 * Shell (oh-my-zsh, powerlevel10k prompt, aliases)
 * Editor (VSCode config)
 * Dock layout (managed manually via `bin/set-dock.sh`)
 * Desktop wallpapers per monitor (managed manually via `bin/set-wallpapers.sh`)
 * Agent configs (global AGENTS.md)
+* Reef (window manager, auto-installed from GitHub release)
 
 ## Prerequisites
 
@@ -127,7 +128,7 @@ Read through `brews` and `casks` before you run `bootstrap.sh` or `rebuild.sh` f
 
 - `flake.nix` - the entry point.
   Wires up nixpkgs, nix-darwin, home-manager, and nix-homebrew, and declares the `mac` machine.
-- `configuration.nix` - system-level config: macOS defaults, Homebrew.
+- `configuration.nix` - system-level config: macOS defaults, Homebrew, Reef auto-install and login item setup.
 - `home.nix` - user-level config: shell, packages, prompt, and the symlinks described below.
 - `rebuild.sh` - re-applies the config after the first switch.
   Run this every time you make a change.

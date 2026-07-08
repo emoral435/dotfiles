@@ -8,7 +8,7 @@
     "workbench.colorCustomizations": {
         "terminal.background": "#00000000"
     },
-    "workbench.iconTheme": "catppuccin-macchiato",
+    "workbench.iconTheme": "catppuccin-mocha",
     "editor.padding.top": 16,
     "tabnine.experimentalAutoImports": true,
     "C_Cpp.intelliSenseEngine": "disabled",
@@ -22,7 +22,7 @@
     "mdb.mcp.server": "prompt",
     "workbench.activityBar.location": "top",
     "haskell.manageHLS": "GHCup",
-    "workbench.colorTheme": "GitHub Dark Dimmed",
+    "workbench.colorTheme": "Atom One Dark",
     "explorer.confirmDelete": false,
     "go.lintFlags": [
         "[\"-c\", \"${workspaceFolder}/.golangci.yml\", \"--issues-exit-code=0\"]"
