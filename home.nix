@@ -31,8 +31,10 @@ in
   };
 
   # VSCode
-  home.file."Library/Application Support/Code/User/settings.json".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/settings.json";
+  home.file."Library/Application Support/Code/User/settings.json" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/settings.json";
+    force = true;
+  };
   home.file."Library/Application Support/Code/User/keybindings.json" = {
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/keybindings.json";
     force = true;
@@ -49,8 +51,12 @@ in
   };
 
   # Zsh / Powerlevel10k
-  home.file.".zshrc".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/zsh/.zshrc";
-  home.file.".p10k.zsh".source =
-    config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/zsh/.p10k.zsh";
+  home.file.".zshrc" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/zsh/.zshrc";
+    force = true;
+  };
+  home.file.".p10k.zsh" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/zsh/.p10k.zsh";
+    force = true;
+  };
 }
