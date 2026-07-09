@@ -64,8 +64,11 @@
       "todoist-app" # What I use to manage my tasks
     ];
   };
-  system.activationScripts.rectangleSettings.text = ''
-    sudo -u ${user} defaults write com.knollsoft.Rectangle alternateDefaultShortcuts -bool false
+  # Restore Rectangle preferences from dotfiles (replaces any per-machine defaults)
+  system.activationScripts.rectangleRestore.text = ''
+    if [ -f "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist" ]; then
+      sudo -u ${user} defaults import com.knollsoft.Rectangle "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist"
+    fi
   '';
 
   # Reef is installed from a GitHub release zip (no Homebrew cask yet)
