@@ -73,4 +73,10 @@ in
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/zsh/.p10k.zsh";
     force = true;
   };
+
+  # Herdr
+   home.file.".config/herdr/config.toml" = {
+    source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/herdr/config.toml";
+    force = true;
+  };
 }

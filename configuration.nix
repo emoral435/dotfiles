@@ -51,6 +51,7 @@
       "python@3.14"
       "ripgrep"      # Fast file search (also installed via Nix pkgs)
       "tmux"         # Terminal multiplexer
+      "herdr"        # My personal, agent-first multiplexer
     ];
     casks = [
       "ghostty" # My terminal
