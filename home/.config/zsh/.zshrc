@@ -12,6 +12,17 @@ export PATH=$PATH:/usr/local/go/bin
 # Path to your oh-my-zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
+# Auto-install oh-my-zsh if not present
+if [ ! -d "$ZSH" ]; then
+  KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+fi
+
+# Auto-install powerlevel10k theme if not present
+P10K_DIR="${ZSH_CUSTOM:-$ZSH/custom}/themes/powerlevel10k"
+if [ ! -d "$P10K_DIR" ]; then
+  git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$P10K_DIR"
+fi
+
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time oh-my-zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
