@@ -145,7 +145,8 @@ if [ -f '/Users/eduardo_morales/Downloads/google-cloud-sdk/path.zsh.inc' ]; then
 if [ -f '/Users/eduardo_morales/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/eduardo_morales/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-[ -f "/Users/eduardo_morales/.ghcup/env" ] && . "/Users/eduardo_morales/.ghcup/env" # ghcup-envexport PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+[ -f "/Users/eduardo_morales/.ghcup/env" ] && . "/Users/eduardo_morales/.ghcup/env"
+export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 
 # The following configures our GOPATH to $PATH
 export PATH=$PATH:$(go env GOPATH)/bin
@@ -155,3 +156,6 @@ export PATH=/Users/eduardo_morales/.opencode/bin:$PATH
 
 # time-broker alias
 alias tb='time-broker'
+
+# Powerlevel10k instant prompt end. Should stay close to the bottom of ~/.zshrc.
+[[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]] || return
