@@ -55,7 +55,6 @@
     casks = [
       "ghostty" # My terminal
       "opensuperwhisper" # Like whispr, but opensource
-      "google-chrome" # My default browser - I know, this drains RAM, but its the internets default
       "spotify" # Gotta listen to my music
       "visual-studio-code" # My main 'IDE', but moreso my main text editor
       "notion" # Where I love to take notes

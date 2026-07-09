@@ -80,7 +80,7 @@ No separate build-and-copy step.
 ./bin/set-dock.sh
 ```
 
-This clears the dock and pins the apps listed in the script. Currently that is: Ghostty, Google Chrome, Spotify, Visual Studio Code, Notion, and Todoist.
+This clears the dock and pins the apps listed in the script. Currently that is: Ghostty, Spotify, Visual Studio Code, Notion, and Todoist.
 
 **Desktop wallpapers** are set once per machine. Drop your images into `home/.config/wallpapers/` as `display-1.jpg`, `display-2.jpg`, and `display-3.jpg` (one per monitor), then run:
 

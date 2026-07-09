@@ -15,7 +15,6 @@ $DOCKUTIL --remove all --no-restart 2>/dev/null || true
 
 echo "Adding apps..."
 $DOCKUTIL --add /Applications/Ghostty.app --no-restart
-$DOCKUTIL --add /Applications/Google\ Chrome.app --no-restart
 $DOCKUTIL --add /Applications/Spotify.app --no-restart
 $DOCKUTIL --add /Applications/Visual\ Studio\ Code.app --no-restart
 $DOCKUTIL --add /Applications/Notion.app --no-restart
