@@ -66,10 +66,6 @@
   # Restore Rectangle preferences from dotfiles (replaces any per-machine defaults)
   # Reef is installed from a GitHub release zip (no Homebrew cask yet)
   system.activationScripts.postActivation.text = ''
-    if [ -f "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist" ]; then
-      sudo -u ${user} defaults import com.knollsoft.Rectangle "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist"
-    fi
-
     if [ ! -d "/Applications/Reef.app" ]; then
       echo "Installing Reef from GitHub release..."
       LATEST_URL="https://github.com/gouwsxander/Reef/releases/latest/download/Reef.zip"
