@@ -12,7 +12,7 @@ Me setup consists of the following:
 * Nix user packages (ripgrep, fd, fzf, jq, lazygit, Hack Nerd Font)
 * Shell (oh-my-zsh, powerlevel10k prompt, aliases)
 * Editor (Neovim + VSCode config)
-* Neovim is the default editor -- nice things like no blinking cursor in normal mode
+* Neovim is the default editor (yes, I am superior to you if you do not use neovim)
 * Dock layout (managed manually via `bin/set-dock.sh`)
 * Desktop wallpapers per monitor (managed manually via `bin/set-wallpapers.sh`)
 * Agent configs (global AGENTS.md)
@@ -51,6 +51,11 @@ Change the host label or CPU architecture if needed, and read the Homebrew clean
    It fetches the `darwin-rebuild` tool from the nix-darwin 26.05 release branch, then applies this repo's locked flake config.
 
 After that, `darwin-rebuild` exists and you're on the normal workflow below.
+
+### Extra Steps To Take For My Specific Configurations/Apps Upon First Start
+
+1. Rectangle will need to be authorized under MAcOS's settings, under: `Privacy & Security > Accessibility`.
+2. Reef will need to have its profiles configured.
 
 ### Validate without applying
 
