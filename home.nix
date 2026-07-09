@@ -30,6 +30,13 @@ in
     force = true;
   };
 
+  # VSCode: remove pre-existing directories to prevent ln from failing to replace them with symlinks
+  home.activation.removeVSCodeDirs = config.lib.dag.entryBefore ["linkGeneration"] ''
+    rm -rf "${config.home.homeDirectory}/Library/Application Support/Code/User/settings.json"
+    rm -rf "${config.home.homeDirectory}/Library/Application Support/Code/User/keybindings.json"
+    rm -rf "${config.home.homeDirectory}/Library/Application Support/Code/User/snippets"
+  '';
+
   # VSCode
   home.file."Library/Application Support/Code/User/settings.json" = {
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/settings.json";
