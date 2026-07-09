@@ -37,6 +37,13 @@ in
     rm -rf "${config.home.homeDirectory}/Library/Application Support/Code/User/snippets"
   '';
 
+  # VSCode: install extensions that dotfiles depend on
+  home.activation.installVSCodeExtensions = config.lib.dag.entryAfter ["linkGeneration"] ''
+    if command -v code >/dev/null 2>&1; then
+      code --install-extension akamud.vscode-theme-onedark --force 2>/dev/null || true
+    fi
+  '';
+
   # VSCode
   home.file."Library/Application Support/Code/User/settings.json" = {
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/Code/User/settings.json";
