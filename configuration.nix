@@ -65,38 +65,30 @@
     ];
   };
   # Restore Rectangle preferences from dotfiles (replaces any per-machine defaults)
-  system.activationScripts.rectangleRestore = {
-    deps = [ "users" ];
-    text = ''
-      if [ -f "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist" ]; then
-        sudo -u ${user} defaults import com.knollsoft.Rectangle "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist"
-      fi
-    '';
-  };
-
   # Reef is installed from a GitHub release zip (no Homebrew cask yet)
-  system.activationScripts.reefInstall = {
-    deps = [ "users" ];
-    text = ''
-      if [ ! -d "/Applications/Reef.app" ]; then
-        echo "Installing Reef from GitHub release..."
-        LATEST_URL="https://github.com/gouwsxander/Reef/releases/latest/download/Reef.zip"
-        curl -fsSL --retry 3 -o /tmp/reef.zip "$LATEST_URL"
-        unzip -q /tmp/reef.zip -d /Applications/
-        chown -R "$(stat -f '%Su' /dev/console):staff" /Applications/Reef.app
-        rm /tmp/reef.zip
-      fi
+  system.activationScripts.postActivation.text = ''
+    if [ -f "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist" ]; then
+      sudo -u ${user} defaults import com.knollsoft.Rectangle "/Users/${user}/.dotfiles/home/.config/rectangle/preferences.plist"
+    fi
 
-      # Ensure Reef is in login items
-      LOGIN_ITEMS=$(sudo -u ${user} osascript -e 'tell application "System Events" to get name of every login item' 2>/dev/null)
-      if ! echo "$LOGIN_ITEMS" | grep -q "Reef"; then
-        sudo -u ${user} osascript -e 'tell application "System Events" to make new login item with properties {name:"Reef", path:"/Applications/Reef.app", hidden:false}'
-      fi
+    if [ ! -d "/Applications/Reef.app" ]; then
+      echo "Installing Reef from GitHub release..."
+      LATEST_URL="https://github.com/gouwsxander/Reef/releases/latest/download/Reef.zip"
+      curl -fsSL --retry 3 -o /tmp/reef.zip "$LATEST_URL"
+      unzip -q /tmp/reef.zip -d /Applications/
+      chown -R "${user}:staff" /Applications/Reef.app
+      rm /tmp/reef.zip
+    fi
 
-      # Restore Reef preferences from dotfiles if available
-      if [ -f "/Users/${user}/.config/reef/preferences.plist" ]; then
-        sudo -u ${user} defaults import xandergouws.Reef "/Users/${user}/.config/reef/preferences.plist"
-      fi
-    '';
-  };
+    # Ensure Reef is in login items
+    LOGIN_ITEMS=$(sudo -u ${user} osascript -e 'tell application "System Events" to get name of every login item' 2>/dev/null)
+    if ! echo "$LOGIN_ITEMS" | grep -q "Reef"; then
+      sudo -u ${user} osascript -e 'tell application "System Events" to make new login item with properties {name:"Reef", path:"/Applications/Reef.app", hidden:false}'
+    fi
+
+    # Restore Reef preferences from dotfiles if available
+    if [ -f "/Users/${user}/.config/reef/preferences.plist" ]; then
+      sudo -u ${user} defaults import xandergouws.Reef "/Users/${user}/.config/reef/preferences.plist"
+    fi
+  '';
 }
