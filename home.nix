@@ -1,4 +1,4 @@
-{ config, pkgs, user, treehouse, ... }:
+{ config, pkgs, user, ... }:
 let
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
 in
@@ -11,7 +11,6 @@ in
     ripgrep   # fast search
     lazygit
     neovim
-    treehouse.packages.${pkgs.system}.default
     # the font everything renders in
     nerd-fonts.hack
   ];
