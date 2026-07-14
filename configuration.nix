@@ -63,6 +63,7 @@
       "rectangle" # What I use to manage my windows around the screen - super helpful, and it is what I have gotten used too
       "todoist-app" # What I use to manage my tasks
 			"maccy" # Really handy copy and paste clipboard application - saves multiple copied items and saves them!
+      "shottr" # Way better than Mac's native screenshot tool
     ];
   };
   # Restore Rectangle preferences from dotfiles (replaces any per-machine defaults)
