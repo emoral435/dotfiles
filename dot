@@ -67,7 +67,7 @@ nix_arch() {
   esac
 }
 
-# Asks the one question (work or personal) unless DOT_KIND is already set.
+# The one question (work or personal), unless DOT_KIND is already set. Sets KIND.
 ask_kind() {
   local answer="${DOT_KIND:-}"
   if [ -z "$answer" ]; then
@@ -76,29 +76,27 @@ ask_kind() {
     read -r answer
   fi
   case "$answer" in
-    w|work) echo work ;;
-    p|personal) echo personal ;;
+    w|work) KIND=work ;;
+    p|personal) KIND=personal ;;
     *) die "please answer w (work) or p (personal)." "$REPO/dot" ;;
   esac
 }
 
-# Print the machine file, creating it on the first run (not on a dry run).
-machine_settings() {
-  local dry_run="$1"
-  if [ -f "$MACHINE_FILE" ]; then cat "$MACHINE_FILE"; return; fi
-  local settings
-  settings="$(printf 'user=%s\nhome=%s\nkind=%s\narch=%s\n' "$(whoami)" "$HOME" "$(ask_kind)" "$(nix_arch)")"
-  if [ "$dry_run" = no ]; then
-    mkdir -p "$STATE_DIR"
-    printf '%s\n' "$settings" > "$MACHINE_FILE"
-    say "Saved this Mac's settings in $MACHINE_FILE"
-  fi
-  printf '%s\n' "$settings"
-}
-
-# Export DOT_USER, DOT_HOME, DOT_KIND, DOT_ARCH for the flake.
+# Create the machine file on the first run (in memory only on a dry run), then
+# export DOT_USER, DOT_HOME, DOT_KIND, DOT_ARCH for the flake.
 load_machine() {
-  local key value
+  local dry_run="$1" settings key value
+  if [ -f "$MACHINE_FILE" ]; then
+    settings="$(cat "$MACHINE_FILE")"
+  else
+    ask_kind
+    settings="$(printf 'user=%s\nhome=%s\nkind=%s\narch=%s' "$(whoami)" "$(cd "$HOME" && pwd -P)" "$KIND" "$(nix_arch)")"
+    if [ "$dry_run" = no ]; then
+      mkdir -p "$STATE_DIR"
+      printf '%s\n' "$settings" > "$MACHINE_FILE"
+      say "Saved this Mac's settings in $MACHINE_FILE"
+    fi
+  fi
   while IFS='=' read -r key value; do
     case "$key" in
       user) export DOT_USER="$value" ;;
@@ -106,7 +104,7 @@ load_machine() {
       kind) export DOT_KIND="$value" ;;
       arch) export DOT_ARCH="$value" ;;
     esac
-  done <<< "$(machine_settings "$1")"
+  done <<< "$settings"
 }
 
 # --- Moving changes between Macs. ---
@@ -244,7 +242,25 @@ cmd_default() {
   ensure_work_overlay
   switch_system
   sync_agents
-  cmd_doctor
+  ensure_code
+  cmd_doctor || true
+  offer_vscode
+}
+
+# Homebrew's VS Code cask installs `code`. If it is not on PATH yet, link it from the app.
+ensure_code() {
+  command -v code >/dev/null 2>&1 && return 0
+  local app_code="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  [ -x "$app_code" ] || die "VS Code is not installed yet." "$REPO/dot"
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$app_code" "$HOME/.local/bin/code"
+  export PATH="$HOME/.local/bin:$PATH"
+  say "Linked the code command into ~/.local/bin"
+}
+
+offer_vscode() {
+  if ask_yes "Open the repo in VS Code?"; then ensure_code; code "$REPO"; fi
+  return 0
 }
 
 # --- Doctor. ---
@@ -261,13 +277,17 @@ cmd_doctor() {
   fixes=()
   say "Tools"
   local tool
-  for tool in nix darwin-rebuild git gh nvim rg python3 herdr; do
+  for tool in nix darwin-rebuild git gh code nvim rg python3 herdr; do
     if command -v "$tool" >/dev/null 2>&1; then ok "$tool"; else fix "$tool is missing" "dot"; fi
   done
   if command -v pi >/dev/null 2>&1; then ok "pi"; else fix "pi is missing" "npm install -g @earendil-works/pi-coding-agent"; fi
 
   say "This Mac"
-  if [ -f "$MACHINE_FILE" ]; then ok "$(tr '\n' ' ' < "$MACHINE_FILE")"; else fix "dot has not set up this Mac yet" "dot"; fi
+  if [ ! -f "$MACHINE_FILE" ]; then
+    printf '\n==> 1 thing to fix:\n  1. This Mac is not set up yet. Type: %s/dot\n' "$REPO"
+    return 1
+  fi
+  ok "$(tr '\n' ' ' < "$MACHINE_FILE")"
   check_link "$LINK" "$REPO"
   if repo_dirty; then fix "the repo has edits your other Mac does not have" "dot save"; fi
 
@@ -344,7 +364,8 @@ cmd_edit() {
     nix) file="$REPO/configuration.nix" ;;
     *) die "edit needs a name." "dot edit agents   (or work, pi, ghostty, herdr, zsh, nvim, nix)" ;;
   esac
-  "${EDITOR:-nvim}" "$file"
+  ensure_code
+  code --wait "$file"
   case "$1" in
     agents|work|pi) sync_agents; say "Saved. New agent sessions use it." ;;
   esac

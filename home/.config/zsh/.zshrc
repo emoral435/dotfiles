@@ -104,7 +104,7 @@ unalias nvim 2>/dev/null   # drop any stale alias so the nix-installed nvim is f
 # export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
-export EDITOR='nvim'
+export EDITOR='code --wait'
 
 # Compilation flags
 # export ARCHFLAGS="-arch x86_64"
