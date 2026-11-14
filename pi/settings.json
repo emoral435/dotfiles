@@ -1,0 +1,62 @@
+{
+  "theme": "dark",
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-opus-5-5",
+  "packages": [
+    "extensions/schedule-wakeup.ts",
+    "npm:pi-subagents",
+    "npm:pi-mcp-adapter",
+    "git:github.com/DietrichGebert/ponytail",
+    "npm:pi-intercom",
+    "npm:pi-web-access@0.30.0"
+  ],
+  "hideThinkingBlock": true,
+  "compaction": {
+    "modelOverrides": {
+      "anthropic/claude-opus-5-5": {
+        "reserveTokens": 200000
+      },
+      "anthropic/claude-opus-4-8": {
+        "reserveTokens": 200000
+      }
+    }
+  },
+  "terminal": {
+    "showTerminalProgress": false
+  },
+  "markdown": {
+    "mermaid": "streaming"
+  },
+  "tuiMode": "fullscreen",
+  "subagents": {
+    "agentOverrides": {
+      "researcher": {
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "medium"
+      },
+      "scout": {
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "low"
+      },
+      "worker": {
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "high"
+      },
+      "reviewer": {
+        "model": "openai-codex/gpt-6.1-sol",
+        "thinking": "high",
+        "tools": [
+          "read",
+          "grep",
+          "find",
+          "ls",
+          "bash"
+        ]
+      },
+      "oracle": {
+        "model": "anthropic/claude-opus-5-5",
+        "thinking": "high"
+      }
+    }
+  }
+}

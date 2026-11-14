@@ -1,0 +1,412 @@
+#!/usr/bin/env bash
+# dot: set up this Mac, or bring it up to date. Run it with no arguments.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd -P)"
+LINK="$HOME/.dotfiles"
+STATE_DIR="$HOME/.config/dotfiles"
+MACHINE_FILE="$STATE_DIR/machine"
+PRIVATE_WORDS="$STATE_DIR/private-words"
+AGENTS_DIR="$HOME/.config/agents"
+WORK_OVERLAY="$AGENTS_DIR/work.md"
+NIX_PROFILE=/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+NIX_DARWIN=github:nix-darwin/nix-darwin/nix-darwin-26.05
+FLAKE="$REPO#this"
+
+say() { printf '==> %s\n' "$*"; }
+# Every error ends with the exact command to type next.
+die() { printf '\ndot: %s\n     Next: %s\n' "$1" "$2" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Usage: dot [--dry-run]
+
+  dot            First run: set up this Mac. After that: save local edits, pull, and apply.
+  dot --dry-run  Build everything, change nothing.
+
+Optional:
+  dot save          Commit and push your repo edits, so your other Mac gets them on its next dot.
+  dot doctor        Check the setup. Ends with "All good" or a numbered fix list.
+  dot edit <thing>  Open agents, work, pi, ghostty, herdr, zsh, nvim, or nix.
+EOF
+}
+
+ask_yes() {
+  local answer
+  # DOT_YES=1 answers yes for scripts and tests.
+  [ "${DOT_YES:-}" = 1 ] && return 0
+  [ -t 0 ] || return 1
+  printf '%s [y/N] ' "$1" >&2
+  read -r answer
+  [ "$answer" = y ] || [ "$answer" = Y ]
+}
+
+ensure_mac() {
+  [ "$(uname)" = Darwin ] || die "this setup is for macOS only." "run dot on a Mac"
+}
+
+ensure_nix() {
+  local dry_run="$1"
+  if command -v nix >/dev/null 2>&1; then return; fi
+  # shellcheck source=/dev/null
+  [ -f "$NIX_PROFILE" ] && . "$NIX_PROFILE"
+  if command -v nix >/dev/null 2>&1; then return; fi
+  [ "$dry_run" = no ] || die "Nix is not installed, so a dry run cannot build." "$REPO/dot   (installs Nix, then sets up this Mac)"
+  say "Installing Nix (Determinate Systems installer, asks for your password)"
+  curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
+  # shellcheck source=/dev/null
+  . "$NIX_PROFILE"
+}
+
+# Flakes are switched on per call, so no Nix setting has to be edited by hand.
+nix_cmd() { nix --extra-experimental-features 'nix-command flakes' "$@"; }
+
+# --- The machine file: the only thing that differs between Macs. ---
+
+nix_arch() {
+  case "$(uname -m)" in
+    arm64) echo aarch64-darwin ;;
+    x86_64) echo x86_64-darwin ;;
+    *) die "unknown CPU $(uname -m)." "open an issue with the output of: uname -m" ;;
+  esac
+}
+
+# The one question (work or personal), unless DOT_KIND is already set. Sets KIND.
+ask_kind() {
+  local answer="${DOT_KIND:-}"
+  if [ -z "$answer" ]; then
+    [ -t 0 ] || die "dot needs to know if this is a work or a personal Mac." "DOT_KIND=personal $REPO/dot   (or DOT_KIND=work)"
+    printf 'Is this a work Mac or a personal Mac? [w/p] ' >&2
+    read -r answer
+  fi
+  case "$answer" in
+    w|work) KIND=work ;;
+    p|personal) KIND=personal ;;
+    *) die "please answer w (work) or p (personal)." "$REPO/dot" ;;
+  esac
+}
+
+# Create the machine file on the first run (in memory only on a dry run), then
+# export DOT_USER, DOT_HOME, DOT_KIND, DOT_ARCH for the flake.
+load_machine() {
+  local dry_run="$1" settings key value
+  if [ -f "$MACHINE_FILE" ]; then
+    settings="$(cat "$MACHINE_FILE")"
+  else
+    ask_kind
+    settings="$(printf 'user=%s\nhome=%s\nkind=%s\narch=%s' "$(whoami)" "$(cd "$HOME" && pwd -P)" "$KIND" "$(nix_arch)")"
+    if [ "$dry_run" = no ]; then
+      mkdir -p "$STATE_DIR"
+      printf '%s\n' "$settings" > "$MACHINE_FILE"
+      say "Saved this Mac's settings in $MACHINE_FILE"
+    fi
+  fi
+  while IFS='=' read -r key value; do
+    case "$key" in
+      user) export DOT_USER="$value" ;;
+      home) export DOT_HOME="$value" ;;
+      kind) export DOT_KIND="$value" ;;
+      arch) export DOT_ARCH="$value" ;;
+    esac
+  done <<< "$settings"
+}
+
+# --- Moving changes between Macs. ---
+
+repo_dirty() { [ -n "$(git -C "$REPO" status --porcelain)" ]; }
+
+has_upstream() { git -C "$REPO" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; }
+
+# The repo is public. Words in ~/.config/dotfiles/private-words must never be pushed.
+# Checks the staged edit and every commit that is not on the upstream yet.
+check_private_words() {
+  [ -s "$PRIVATE_WORDS" ] || return 0
+  local hits
+  hits="$( { git -C "$REPO" diff --cached; git -C "$REPO" log -p --diff-merges=first-parent --format= '@{upstream}..HEAD'; } \
+    | grep '^+' | grep -i -F -f "$PRIVATE_WORDS" || true)"
+  [ -z "$hits" ] && return 0
+  git -C "$REPO" reset -q
+  printf '%s\n' "$hits" >&2
+  die "these lines hold words from $PRIVATE_WORDS, so dot will not push them." "remove them (move them to ~/.zshrc.local or ~/.config/agents/work.md; for a saved commit: git -C $REPO reset @{upstream}), then run dot save"
+}
+
+unpushed_commits() {
+  has_upstream || return 1
+  # Offline still counts commits ahead of the last known upstream.
+  git -C "$REPO" fetch -q || say "Could not reach the remote. Checking against the last fetch."
+  [ "$(git -C "$REPO" rev-list --count '@{upstream}..HEAD')" -gt 0 ]
+}
+
+push_saved() {
+  check_private_words
+  git -C "$REPO" pull -q --rebase \
+    || die "your edit and the other Mac's edit touch the same lines." "git -C $REPO status   (fix the conflict, then: git -C $REPO rebase --continue && dot)"
+  git -C "$REPO" push -q || die "git push failed (see above)." "dot save"
+  say "Saved and pushed."
+}
+
+cmd_save() {
+  if ! repo_dirty; then
+    if unpushed_commits; then say "Pushing saved commits"; push_saved; else say "Nothing to save."; fi
+    return 0
+  fi
+  say "Changed in the repo:"
+  git -C "$REPO" status --short
+  if ! ask_yes "Commit and push these, so your other Mac gets them?"; then
+    say "Not saved. They stay here. Save later with: dot save"
+    return 0
+  fi
+  has_upstream || die "this branch has no upstream to push to." "git -C $REPO push -u origin HEAD"
+  git -C "$REPO" add -A
+  check_private_words
+  git -C "$REPO" commit -q -m "chore: update from the ${DOT_KIND:-other} Mac"
+  push_saved
+}
+
+pull_latest() {
+  if ! has_upstream; then
+    say "This branch has no upstream, so dot applies the local repo as it is."
+    return
+  fi
+  say "Pulling the latest from your other Mac"
+  git -C "$REPO" pull -q --rebase --autostash \
+    || die "the pull hit a conflict with your local edits." "git -C $REPO status   (fix it, then run dot)"
+}
+
+# --- Applying the config. ---
+
+ensure_link() {
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$REPO/dot" "$HOME/.local/bin/dot"
+  [ "$(readlink "$LINK" 2>/dev/null)" = "$REPO" ] && return
+  if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
+    die "$LINK exists and is not a link to this repo." "mv $LINK $LINK.old && $REPO/dot"
+  fi
+  say "Linking $LINK to $REPO"
+  ln -sfn "$REPO" "$LINK"
+}
+
+build_system() {
+  say "Building the config ($DOT_KIND Mac, $DOT_USER, $DOT_ARCH)"
+  nix_cmd build --impure --no-link "$REPO#darwinConfigurations.this.system" \
+    || die "the build failed (see the error above)." "fix it, then run $REPO/dot --dry-run"
+}
+
+switch_system() {
+  local env_args=(env "DOT_USER=$DOT_USER" "DOT_HOME=$DOT_HOME" "DOT_KIND=$DOT_KIND" "DOT_ARCH=$DOT_ARCH")
+  say "Switching to the new config (asks for your password)"
+  if command -v darwin-rebuild >/dev/null 2>&1; then
+    sudo "${env_args[@]}" darwin-rebuild switch --impure --flake "$FLAKE"
+  else
+    # First run: darwin-rebuild is not installed yet, so run it from nix-darwin once.
+    sudo "${env_args[@]}" "$(command -v nix)" --extra-experimental-features 'nix-command flakes' \
+      run "$NIX_DARWIN#darwin-rebuild" -- switch --impure --flake "$FLAKE"
+  fi
+}
+
+# ~/AGENTS.md = repo rules + the work overlay. The output stays outside the repo.
+sync_agents() {
+  mkdir -p "$AGENTS_DIR"
+  local out="$AGENTS_DIR/AGENTS.md" tmp
+  tmp="$(mktemp "$AGENTS_DIR/.AGENTS.XXXXXX")"
+  {
+    printf '<!-- Generated by dot. Edit with: dot edit agents, or dot edit work. -->\n\n'
+    cat "$REPO/agents/AGENTS.md"
+    if [ -f "$WORK_OVERLAY" ]; then
+      printf '\n'
+      cat "$WORK_OVERLAY"
+    fi
+  } > "$tmp"
+  mv "$tmp" "$out"
+  merge_pi_settings
+}
+
+# Pi rewrites its settings file, so the repo keeps a base and dot merges it in (repo keys win).
+merge_pi_settings() {
+  local target="$HOME/.pi/agent/settings.json"
+  mkdir -p "$(dirname "$target")"
+  python3 - "$REPO/pi/settings.json" "$target" <<'PY'
+import json, os, sys
+base_path, target_path = sys.argv[1], sys.argv[2]
+base = json.load(open(base_path))
+local = json.load(open(target_path)) if os.path.exists(target_path) else {}
+local.update(base)
+with open(target_path, "w") as f:
+    json.dump(local, f, indent=2)
+    f.write("\n")
+PY
+}
+
+# A work Mac gets an empty overlay to fill in. It never goes into the repo.
+ensure_work_overlay() {
+  [ "$DOT_KIND" = work ] || return 0
+  [ -f "$WORK_OVERLAY" ] && return 0
+  mkdir -p "$AGENTS_DIR"
+  printf '## Work rules (this Mac only, not in the dotfiles repo)\n\n' > "$WORK_OVERLAY"
+  say "Created $WORK_OVERLAY. Add work rules with: dot edit work"
+}
+
+# No arguments: first run sets up; later runs save, pull, and apply.
+cmd_default() {
+  local dry_run="$1"
+  ensure_mac
+  ensure_nix "$dry_run"
+  load_machine "$dry_run"
+  if [ "$dry_run" = no ]; then
+    if repo_dirty || unpushed_commits; then cmd_save; fi
+    pull_latest
+  fi
+  build_system
+  if [ "$dry_run" = yes ]; then
+    say "Dry run OK. Nothing changed. Next: $REPO/dot"
+    return
+  fi
+  ensure_link
+  ensure_work_overlay
+  switch_system
+  sync_agents
+  ensure_code
+  cmd_doctor || true
+  offer_vscode
+}
+
+# Homebrew's VS Code cask installs `code`. If it is not on PATH yet, link it from the app.
+ensure_code() {
+  command -v code >/dev/null 2>&1 && return 0
+  local app_code="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  [ -x "$app_code" ] || die "VS Code is not installed yet." "$REPO/dot"
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$app_code" "$HOME/.local/bin/code"
+  export PATH="$HOME/.local/bin:$PATH"
+  say "Linked the code command into ~/.local/bin"
+}
+
+offer_vscode() {
+  if ask_yes "Open the repo in VS Code?"; then ensure_code; code "$REPO"; fi
+  return 0
+}
+
+# --- Doctor. ---
+
+fixes=()
+ok() { printf '  ok    %s\n' "$1"; }
+fix() { printf '  --    %s\n' "$1"; fixes+=("$1. Type: $2"); }
+
+check_link() {
+  if [ "$(readlink -f "$1" 2>/dev/null)" = "$(readlink -f "$2")" ]; then ok "$1"; else fix "$1 is not linked to the repo" "dot"; fi
+}
+
+cmd_doctor() {
+  fixes=()
+  say "Tools"
+  local tool
+  for tool in nix darwin-rebuild git gh code nvim rg python3 herdr; do
+    if command -v "$tool" >/dev/null 2>&1; then ok "$tool"; else fix "$tool is missing" "dot"; fi
+  done
+  if command -v pi >/dev/null 2>&1; then ok "pi"; else fix "pi is missing" "npm install -g @earendil-works/pi-coding-agent"; fi
+
+  say "This Mac"
+  if [ ! -f "$MACHINE_FILE" ]; then
+    printf '\n==> 1 thing to fix:\n  1. This Mac is not set up yet. Type: %s/dot\n' "$REPO"
+    return 1
+  fi
+  ok "$(tr '\n' ' ' < "$MACHINE_FILE")"
+  check_link "$LINK" "$REPO"
+  check_link "$HOME/.local/bin/dot" "$REPO/dot"
+  if repo_dirty; then fix "the repo has edits your other Mac does not have" "dot save"; fi
+
+  say "Config links (edit in place, the change lands in the repo)"
+  local path
+  for path in \
+    "Library/Application Support/com.mitchellh.ghostty/config:home/.config/ghostty/config" \
+    ".config/herdr/config.toml:home/.config/herdr/config.toml" \
+    ".config/nvim:home/.config/nvim" \
+    ".zshrc:home/.config/zsh/.zshrc" \
+    ".p10k.zsh:home/.config/zsh/.p10k.zsh" \
+    "Library/Application Support/Code/User/settings.json:home/.config/Code/User/settings.json"; do
+    check_link "$HOME/${path%%:*}" "$REPO/${path#*:}"
+  done
+
+  say "Agent rules"
+  local generated="$AGENTS_DIR/AGENTS.md"
+  for path in "$HOME/AGENTS.md" "$HOME/.codex/AGENTS.md" "$HOME/.claude/CLAUDE.md"; do
+    if [ -f "$generated" ] && [ "$(readlink -f "$path" 2>/dev/null)" = "$(readlink -f "$generated")" ]; then
+      ok "$path"
+    else
+      fix "$path is not the generated AGENTS.md" "dot"
+    fi
+  done
+  local stale=no
+  [ -f "$generated" ] && [ "$generated" -ot "$REPO/agents/AGENTS.md" ] && stale=yes
+  [ -f "$generated" ] && [ -f "$WORK_OVERLAY" ] && [ "$generated" -ot "$WORK_OVERLAY" ] && stale=yes
+  if [ "$stale" = yes ]; then fix "$HOME/AGENTS.md is older than its sources" "dot"; fi
+  if grep -q '^kind=work$' "$MACHINE_FILE" 2>/dev/null; then
+    if [ -f "$WORK_OVERLAY" ]; then ok "work rules in $WORK_OVERLAY"; else fix "this work Mac has no work rules file" "dot edit work"; fi
+  fi
+
+  say "Skills"
+  local dir name root unlinked=0
+  for dir in "$REPO"/agents/skills/*/; do
+    name="$(basename "$dir")"
+    [ "$name" = LICENSES ] && continue
+    for root in "$HOME/.agents/skills" "$HOME/.pi/agent/skills" "$HOME/.claude/skills"; do
+      [ "$(readlink -f "$root/$name" 2>/dev/null)" = "$(readlink -f "$dir")" ] || unlinked=$((unlinked + 1))
+    done
+  done
+  if [ "$unlinked" -eq 0 ]; then ok "every skill is linked for pi, Claude Code, and ~/.agents"; else fix "$unlinked skill links are missing" "dot"; fi
+
+  say "Pi"
+  for name in quiet-tools.ts schedule-wakeup.ts calm; do
+    check_link "$HOME/.pi/agent/extensions/$name" "$REPO/pi/extensions/$name"
+  done
+  if python3 - "$REPO/pi/settings.json" "$HOME/.pi/agent/settings.json" <<'PY'
+import json, os, sys
+base = json.load(open(sys.argv[1]))
+local = json.load(open(sys.argv[2])) if os.path.exists(sys.argv[2]) else {}
+sys.exit(0 if all(local.get(k) == v for k, v in base.items()) else 1)
+PY
+  then ok "pi settings match the repo"; else fix "pi settings differ from the repo" "dot"; fi
+
+  echo
+  if [ "${#fixes[@]}" -eq 0 ]; then say "All good"; return 0; fi
+  say "${#fixes[@]} thing(s) to fix:"
+  local i=1 item
+  for item in "${fixes[@]}"; do printf '  %d. %s\n' "$i" "$item"; i=$((i + 1)); done
+  return 1
+}
+
+cmd_edit() {
+  local file
+  case "${1:-}" in
+    agents) file="$REPO/agents/AGENTS.md" ;;
+    work) mkdir -p "$AGENTS_DIR"; file="$WORK_OVERLAY" ;;
+    pi) file="$REPO/pi/settings.json" ;;
+    ghostty) file="$REPO/home/.config/ghostty/config" ;;
+    herdr) file="$REPO/home/.config/herdr/config.toml" ;;
+    zsh) file="$REPO/home/.config/zsh/.zshrc" ;;
+    nvim) file="$REPO/home/.config/nvim" ;;
+    nix) file="$REPO/configuration.nix" ;;
+    *) die "edit needs a name." "dot edit agents   (or work, pi, ghostty, herdr, zsh, nvim, nix)" ;;
+  esac
+  ensure_code
+  code --wait "$file"
+  case "$1" in
+    agents|work|pi) sync_agents; say "Saved. New agent sessions use it." ;;
+  esac
+  [ "$1" = work ] || say "To send this to your other Mac: dot save"
+}
+
+main() {
+  case "${1:-}" in
+    "") cmd_default no ;;
+    --dry-run) cmd_default yes ;;
+    save) cmd_save ;;
+    doctor) cmd_doctor ;;
+    edit) cmd_edit "${2:-}" ;;
+    sync-agents) sync_agents ;;
+    help|-h|--help) usage ;;
+    *) usage; die "unknown command: $1" "dot" ;;
+  esac
+}
+
+main "$@"

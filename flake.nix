@@ -2,9 +2,7 @@
   description = "dotfiles";
 
   inputs = {
-    # Use `github:NixOS/nixpkgs/nixpkgs-26.05-darwin` to use Nixpkgs 26.05.
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
-    # Use `github:nix-darwin/nix-darwin/nix-darwin-26.05` to use Nixpkgs 26.05.
     nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -16,12 +14,23 @@
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, home-manager, nix-homebrew }:
     let
-      # The one username line to change if this isn't your machine.
-      user = "eduardo_morales";
+      # `dot` reads ~/.config/dotfiles/machine and passes it in as DOT_* variables.
+      # The flake holds no user names, so every Mac uses the same config.
+      fromDot = name:
+        let value = builtins.getEnv name;
+        in if value == "" then throw "${name} is not set. Run ./dot, not nix or darwin-rebuild." else value;
+
+      machine = {
+        user = fromDot "DOT_USER";
+        home = fromDot "DOT_HOME";
+        kind = fromDot "DOT_KIND";
+        arch = fromDot "DOT_ARCH";
+      };
+      user = machine.user;
     in
     {
-      darwinConfigurations."mac" = nix-darwin.lib.darwinSystem {
-        specialArgs = { inherit user; };
+      darwinConfigurations.this = nix-darwin.lib.darwinSystem {
+        specialArgs = { inherit user machine; };
         modules = [
           ./configuration.nix
           nix-homebrew.darwinModules.nix-homebrew
@@ -29,12 +38,12 @@
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
-            home-manager.extraSpecialArgs = { inherit user; };
+            # A real file or directory where a link must go is moved aside with this suffix.
+            home-manager.backupFileExtension = "before-dotfiles";
+            home-manager.extraSpecialArgs = { inherit user machine; };
             home-manager.users.${user} = import ./home.nix;
           }
         ];
       };
-
-      darwinPackages = self.darwinConfigurations."mac".pkgs;
     };
 }

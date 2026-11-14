@@ -1,13 +1,13 @@
-{ user, ... }:
+{ user, machine, ... }:
 {
   # Determinate already manages the Nix daemon, so nix-darwin shouldn't.
   nix.enable = false;
   environment.variables.EDITOR = "nvim";
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.hostPlatform = "aarch64-darwin"; # use x86_64-darwin for Intel CPU
+  nixpkgs.hostPlatform = machine.arch;
   system.primaryUser = user;
   users.users.${user} = {
-    home = "/Users/${user}";
+    home = machine.home;
   };
   system.stateVersion = 6;
   system.defaults = {
@@ -33,7 +33,7 @@
   };
   homebrew = {
     enable = true;
-    onActivation.cleanup = "uninstall";  # Uninstalls packages managed by nix's homebrew that have changed since last rebuild or installation - safer than zap IMO, especially across machines
+    onActivation.cleanup = "none";  # Leaves brews/casks not in this list alone, so manual installs (e.g. gcloud-cli) survive a rebuild
 		onActivation.autoUpdate = true;
     onActivation.extraFlags = [ "--force" ];
     brews = [
@@ -92,8 +92,8 @@
 
 
     # Restore Reef preferences from dotfiles if available
-    if [ -f "/Users/${user}/.config/reef/preferences.plist" ]; then
-      sudo -u ${user} defaults import xandergouws.Reef "/Users/${user}/.config/reef/preferences.plist"
+    if [ -f "${machine.home}/.config/reef/preferences.plist" ]; then
+      sudo -u ${user} defaults import xandergouws.Reef "${machine.home}/.config/reef/preferences.plist"
     fi
   '';
 }
