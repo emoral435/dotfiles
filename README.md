@@ -9,7 +9,7 @@ On a new Mac, paste this one line into Terminal:
 git clone https://github.com/emoral435/dotfiles.git ~/github/emoral435/dotfiles && ~/github/emoral435/dotfiles/dot
 ```
 
-After that, type `dot` whenever you want this Mac up to date. That is the whole workflow. At the end, `dot` offers to open the repo in VS Code.
+After that, type `dot` from any folder whenever you want this Mac up to date (open a new terminal after the first run). That is the whole workflow. At the end, `dot` offers to open the repo in VS Code.
 
 ## How your two Macs stay the same
 
@@ -25,7 +25,7 @@ Both Macs use the same config from this repo. The only thing that differs is a s
 | `dot doctor` | Checks the setup. Ends with "All good" or a numbered list of what to type |
 | `dot edit <thing>` | Opens in VS Code: `agents`, `work`, `pi`, `ghostty`, `herdr`, `zsh`, `nvim`, or `nix` |
 
-You never type `nix` or `darwin-rebuild`. `dot` runs them for you. Every error ends with the next command to type.
+You never type `nix` or `darwin-rebuild`. `dot` runs them for you. Every error ends with the next command to type, and `~/.cache/dotfiles/last-run.log` keeps the full output of the last run.
 
 ## Coding agents
 

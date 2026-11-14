@@ -10,12 +10,19 @@ PRIVATE_WORDS="$STATE_DIR/private-words"
 AGENTS_DIR="$HOME/.config/agents"
 WORK_OVERLAY="$AGENTS_DIR/work.md"
 NIX_PROFILE=/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-NIX_DARWIN=github:nix-darwin/nix-darwin/nix-darwin-26.05
-FLAKE="$REPO#this"
+SYSTEM_PROFILE=/nix/var/nix/profiles/system
+LOG_DIR="$HOME/.cache/dotfiles"
+LOG="$LOG_DIR/last-run.log"
 
 say() { printf '==> %s\n' "$*"; }
 # Every error ends with the exact command to type next.
-die() { printf '\ndot: %s\n     Next: %s\n' "$1" "$2" >&2; exit 1; }
+die() {
+  printf '\ndot: %s\n     Next: %s\n' "$1" "$2" >&2
+  # A new Mac's shell may not have ~/.local/bin on PATH until the first switch.
+  command -v dot >/dev/null 2>&1 || printf '     (dot is %s/dot until you open a new terminal)\n' "$REPO" >&2
+  [ -f "$LOG" ] && printf '     Full log: %s\n' "$LOG" >&2
+  exit 1
+}
 
 usage() {
   cat <<'EOF'
@@ -175,9 +182,13 @@ pull_latest() {
 
 # --- Applying the config. ---
 
-ensure_link() {
+link_dot_command() {
   mkdir -p "$HOME/.local/bin"
   ln -sfn "$REPO/dot" "$HOME/.local/bin/dot"
+}
+
+ensure_link() {
+  link_dot_command
   [ "$(readlink "$LINK" 2>/dev/null)" = "$REPO" ] && return
   if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
     die "$LINK exists and is not a link to this repo." "mv $LINK $LINK.old && $REPO/dot"
@@ -186,22 +197,36 @@ ensure_link() {
   ln -sfn "$REPO" "$LINK"
 }
 
-build_system() {
-  say "Building the config ($DOT_KIND Mac, $DOT_USER, $DOT_ARCH)"
-  nix_cmd build --impure --no-link "$REPO#darwinConfigurations.this.system" \
-    || die "the build failed (see the error above)." "fix it, then run $REPO/dot --dry-run"
+build_once() {
+  SYSTEM="$(nix_cmd build --impure --no-link --print-out-paths "$REPO#darwinConfigurations.this.system")"
 }
 
-switch_system() {
-  local env_args=(env "DOT_USER=$DOT_USER" "DOT_HOME=$DOT_HOME" "DOT_KIND=$DOT_KIND" "DOT_ARCH=$DOT_ARCH")
-  say "Switching to the new config (asks for your password)"
-  if command -v darwin-rebuild >/dev/null 2>&1; then
-    sudo "${env_args[@]}" darwin-rebuild switch --impure --flake "$FLAKE"
-  else
-    # First run: darwin-rebuild is not installed yet, so run it from nix-darwin once.
-    sudo "${env_args[@]}" "$(command -v nix)" --extra-experimental-features 'nix-command flakes' \
-      run "$NIX_DARWIN#darwin-rebuild" -- switch --impure --flake "$FLAKE"
+# A damaged Nix download cache makes files inside a pinned input look missing:
+# error: path '«github:NixOS/nixpkgs/...»/pkgs/...' does not exist
+cache_looks_damaged() {
+  grep -q "error: path '«github:.*' does not exist" "$LOG" 2>/dev/null
+}
+
+build_system() {
+  say "Building the config ($DOT_KIND Mac, $DOT_USER, $DOT_ARCH)"
+  build_once && return 0
+  if cache_looks_damaged; then
+    say "Nix's download cache is damaged. Clearing ~/.cache/nix and building again."
+    rm -rf "$HOME/.cache/nix"
+    build_once && return 0
   fi
+  printf '\nThe real error:\n' >&2
+  grep -E '^error|^ +error:' "$LOG" 2>/dev/null | tail -3 >&2 || true
+  die "the build failed (real error above)." "dot --dry-run   (after a fix)"
+}
+
+# The same two steps as darwin-rebuild switch, run on the build made above.
+switch_system() {
+  say "Switching to the new config (asks for your password)"
+  sudo "$(command -v nix-env)" -p "$SYSTEM_PROFILE" --set "$SYSTEM" \
+    || die "could not record the new config." "$REPO/dot"
+  sudo "$SYSTEM/activate" \
+    || die "the switch failed (see above)." "$REPO/dot"
 }
 
 # ~/AGENTS.md = repo rules + the work overlay. The output stays outside the repo.
@@ -251,6 +276,7 @@ cmd_default() {
   local dry_run="$1"
   ensure_mac
   ensure_nix "$dry_run"
+  [ "$dry_run" = no ] && link_dot_command
   load_machine "$dry_run"
   if [ "$dry_run" = no ]; then
     if repo_dirty || unpushed_commits; then cmd_save; fi
@@ -396,7 +422,14 @@ cmd_edit() {
   [ "$1" = work ] || say "To send this to your other Mac: dot save"
 }
 
+start_log() {
+  mkdir -p "$LOG_DIR"
+  : > "$LOG"
+  exec > >(tee -a "$LOG") 2> >(tee -a "$LOG" >&2)
+}
+
 main() {
+  case "${1:-}" in "" | --dry-run | save) start_log ;; esac
   case "${1:-}" in
     "") cmd_default no ;;
     --dry-run) cmd_default yes ;;
