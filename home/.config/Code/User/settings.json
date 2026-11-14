@@ -20,11 +20,12 @@
     "go.toolsManagement.autoUpdate": true,
     "security.workspace.trust.untrustedFiles": "open",
     "mdb.mcp.server": "prompt",
-    "workbench.activityBar.location": "top",
+    "workbench.activityBar.location": "hidden",
     "haskell.manageHLS": "GHCup",
     "workbench.colorTheme": "Atom One Dark",
     "explorer.confirmDelete": false,
     "go.lintFlags": [
         "[\"-c\", \"${workspaceFolder}/.golangci.yml\", \"--issues-exit-code=0\"]"
-    ]
+    ],
+    "terminal.integrated.initialHint": false
 }

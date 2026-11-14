@@ -1,164 +1,59 @@
+For: me, to keep my work Mac and my personal Mac set up the same way.
+Not covered: secrets, work-only rules, and apps that are not in the Homebrew lists.
+
 # dotfiles
 
-My personal MacOS setup. One repo, one area to centralize my personal opinions, and one sick setup. Enjoy.
-
-Inspired by Meta Principle Engineer Kun Chen's own personal [dotfile repo](https://github.com/kunchenguid/dotfiles).
-
-## What You Get
-Me setup consists of the following:
-
-* System settings (dark mode, key repeat, dock, Finder, trackpad)
-* Homebrew apps (casks and CLI tools, make sure to check if you are okay with downloading these)
-* Nix user packages (ripgrep, fd, fzf, jq, lazygit, Hack Nerd Font)
-* Shell (oh-my-zsh, powerlevel10k prompt, aliases)
-* Editor (Neovim + VSCode config)
-* Neovim is the default editor (yes, I am superior to you if you do not use neovim)
-* Dock layout (managed manually via `bin/set-dock.sh`)
-* Desktop wallpapers per monitor (managed manually via `bin/set-wallpapers.sh`)
-* Agent configs (global AGENTS.md)
-* Reef (window manager, auto-installed from GitHub release)
-
-## Prerequisites
-
-- Apple Silicon Mac, by default.
-- Intel Mac: change one line.
-  In `configuration.nix`, set `nixpkgs.hostPlatform = "x86_64-darwin";` (the comment right there tells you the same thing).
-
-## Fresh-machine setup
-
-On a brand new Mac, from a bare clone of this repo:
+On a new Mac, paste this one line into Terminal:
 
 ```sh
-git clone https://github.com/emoral435/dotfiles.git
-cd dotfiles
+git clone https://github.com/emoral435/dotfiles.git ~/github/emoral435/dotfiles && ~/github/emoral435/dotfiles/dot
 ```
 
-Before you run it: review "Make it yours" below.
-Change the host label or CPU architecture if needed, and read the Homebrew cleanup warning.
-`bootstrap.sh` applies the config to your machine, so do this first.
+After that, type `dot` whenever you want this Mac up to date. That is the whole workflow.
 
-```sh
-./bootstrap.sh
-```
+## How your two Macs stay the same
 
-`bootstrap.sh` does four things, in order:
+Both Macs use the same config from this repo. The only thing that differs is a small file that `dot` writes the first time: `~/.config/dotfiles/machine`. It holds your user name, home folder, CPU type, and your answer to the one question `dot` asks: work or personal. Most config files are links into the repo: Ghostty, herdr, Neovim, zsh, and VS Code. An edit you make in the app or the file lands in the repo. Each time you type `dot`, it shows any edits you made on this Mac and asks to push them. Then it pulls the edits from your other Mac and applies everything. A change on one Mac reaches the other on its next `dot`.
 
-1. Installs Determinate Nix, if it isn't already installed.
-2. Symlinks this repo to `~/.dotfiles`.
-   This has to happen before the first build, because `home.nix` points at config files through `~/.dotfiles`.
-3. Checks the `user` configured in `flake.nix` against your actual macOS username, and offers to fix it for you if they differ.
-4. Runs the first `darwin-rebuild switch`.
-   It fetches the `darwin-rebuild` tool from the nix-darwin 26.05 release branch, then applies this repo's locked flake config.
+## What `dot` does
 
-After that, `darwin-rebuild` exists and you're on the normal workflow below.
+| You type | What happens |
+| --- | --- |
+| `dot` | First run: installs Nix, asks work or personal, and sets up the Mac. Later runs: push your edits, pull, apply |
+| `dot --dry-run` | Builds everything and changes nothing |
+| `dot save` | Pushes your edits now, without applying |
+| `dot doctor` | Checks the setup. Ends with "All good" or a numbered list of what to type |
+| `dot edit <thing>` | Opens `agents`, `work`, `pi`, `ghostty`, `herdr`, `zsh`, `nvim`, or `nix` |
 
-### Extra Steps To Take For My Specific Configurations/Apps Upon First Start
+You never type `nix` or `darwin-rebuild`. `dot` runs them for you. Every error ends with the next command to type.
 
-1. Rectangle will need to be authorized under MAcOS's settings, under: `Privacy & Security > Accessibility`.
-2. Reef will need to have its profiles configured.
+## Coding agents
 
-### Validate without applying
+- `agents/AGENTS.md`: my rules for every agent. `dot` writes `~/AGENTS.md`, `~/.claude/CLAUDE.md`, and `~/.codex/AGENTS.md` from it.
+- `agents/skills/`: my skills, linked for pi, Claude Code, and `~/.agents`. Third-party skills keep their MIT licenses in `agents/skills/LICENSES/`.
+- `pi/`: pi settings and extensions. `dot` merges the settings, so pi can still save its own keys.
 
-Once Nix is installed (`bootstrap.sh` step 1 handles that), you can check that the config builds without touching your system - handy when you have edited something:
+## Keep work things off this public repo
 
-```sh
-nix flake check --no-build
-nix build .#darwinConfigurations.mac.system --dry-run
-```
+- Work agent rules go in `~/.config/agents/work.md` (`dot edit work`). `dot` adds them to `~/AGENTS.md` on that Mac only.
+- Shell settings for one Mac go in `~/.zshrc.local`.
+- List words that must never be pushed in `~/.config/dotfiles/private-words`, one per line. `dot save` stops if an edit contains one.
 
-If you renamed the host label in "Make it yours", substitute your label for `mac` in these commands.
+## Good to know
 
-## Daily use
+- Homebrew cleanup is `none`: apps you install by hand stay.
+- Git name and email are not set here. Set them once with `git config --global`.
+- The dock and wallpapers are one-off scripts: `bin/set-dock.sh` and `bin/set-wallpapers.sh`.
+- Rectangle needs Accessibility access the first time (System Settings, Privacy & Security).
 
-Edit the config files in place, then apply:
+## Repo map
 
-```sh
-./rebuild.sh
-```
-
-That's it.
-No separate build-and-copy step.
-
-**Dock layout** is not automated on every rebuild - pinning apps to the dock is a one-off per machine. When you add or remove a cask that should live on the dock, run:
-
-```sh
-./bin/set-dock.sh
-```
-
-This clears the dock and pins the apps listed in the script. Currently that is: Ghostty, Spotify, Visual Studio Code, Notion, and Todoist.
-
-**Desktop wallpapers** are set once per machine. Drop your images into `home/.config/wallpapers/` as `display-1.jpg`, `display-2.jpg`, and `display-3.jpg` (one per monitor), then run:
-
-```sh
-./bin/set-wallpapers.sh
-```
-
-The script asks whether you want the same wallpaper on all displays (uses `display-1.jpg`) or a different one per monitor. If any file is empty or missing, it prints a warning and skips that display.
-
-## Make it yours
-
-This repo is mine.
-If you clone it, review these before you run `bootstrap.sh`:
-
-- **Username**: run `./bootstrap.sh` (it detects your macOS username and offers to set it) OR change the single `user = "emoral435"` line in `flake.nix`. You can find this out by running `whoami`, and copy it using `whoami | pbcopy`.
-  Everything else (`configuration.nix`, `home.nix`, home directory paths) is threaded from that one variable.
-- **Host label** `"mac"`, in three places: `flake.nix` (the `darwinConfigurations."mac"` name), `rebuild.sh:5` (the `#mac` at the end of the flake reference), and `bootstrap.sh`'s first-switch command (also `#mac`).
-  All three have to match.
-- **CPU architecture**, `hostPlatform` in `configuration.nix` (see Prerequisites above).
-
-**Git identity:** this config deliberately does not set your git name or email.
-Git will stop your first commit and tell you to set them (`git config --global user.name "Your Name"` and `git config --global user.email you@example.com`).
-If you'd rather manage that declaratively, add this back to `home.nix` with your own identity:
-
-```nix
-programs.git = {
-  enable = true;
-  settings.user = {
-    name = "Your Name";
-    email = "you@example.com";
-  };
-};
-```
-
-**Homebrew cleanup warning:** `configuration.nix` sets `homebrew.onActivation.cleanup = "zap"`.
-That means every time you switch, Homebrew removes any package or cask on your machine that isn't listed in the `brews` and `casks` arrays in `configuration.nix`.
-If you already have Homebrew stuff installed that isn't in that list, the first switch will uninstall it.
-Read through `brews` and `casks` before you run `bootstrap.sh` or `rebuild.sh` for the first time, and add anything you want to keep.
-
-**Heads-up:**
-
-- `home/AGENTS.md` is my personal agent policy.
-  If you clone this repo, you'd silently inherit my agent instructions - edit or delete `home/AGENTS.md` if you don't want that.
-
-## Repo tour
-
-- `flake.nix` - the entry point.
-  Wires up nixpkgs, nix-darwin, home-manager, and nix-homebrew, and declares the `mac` machine.
-- `configuration.nix` - system-level config: macOS defaults, Homebrew, Reef auto-install and login item setup.
-- `home.nix` - user-level config: shell, packages, prompt, and the symlinks described below.
-- `rebuild.sh` - re-applies the config after the first switch.
-  Run this every time you make a change.
-- `bin/set-dock.sh` - one-off script to pin Homebrew casks to the macOS dock.
-  Run it when you add or remove a dockable app from `brews`/`casks`.
-- `bin/set-wallpapers.sh` - one-off script to set wallpapers per display.
-  Run it after dropping your images into `home/.config/wallpapers/`.
-- `home/` - the actual config files that get symlinked into place (Ghostty config, Neovim config, VSCode settings, zsh/powerlevel10k, wallpapers, global `AGENTS.md`).
-
-## How the symlinks work
-
-The files under `home/` are the real files - editing them here is editing your live config, no rebuild needed to see the change in your editor.
-`home.nix` uses `mkOutOfStoreSymlink` to point the following paths straight at files in this repo, so the two never drift out of sync:
-
-| Target (on disk) | Repo source |
-|---|---|
-| `~/Library/Application Support/com.mitchellh.ghostty/config` | `home/.config/ghostty/config` |
-| `~/Library/Application Support/Code/User/settings.json` | `home/.config/Code/User/settings.json` |
-| `~/Library/Application Support/Code/User/keybindings.json` | `home/.config/Code/User/keybindings.json` |
-| `~/Library/Application Support/Code/User/snippets` | `home/.config/Code/User/snippets` |
-| `~/.zshrc` | `home/.config/zsh/.zshrc` |
-| `~/.p10k.zsh` | `home/.config/zsh/.p10k.zsh` |
-| `~/.config/nvim` | `home/.config/nvim` |
-
-You only run `./rebuild.sh` when you change something that isn't just a symlinked file, like a package list or a system default.
-
-If you add a new config file to `home/`, wire it up in `home.nix` using the same `mkOutOfStoreSymlink` pattern.
+| Path | Holds |
+| --- | --- |
+| `dot` | The one command |
+| `flake.nix` | One shared config. It reads the machine file through `dot` |
+| `configuration.nix` | macOS defaults and Homebrew apps |
+| `home.nix`, `agents.nix` | Links from your home folder into this repo |
+| `home/` | Config files: Ghostty, herdr, Neovim, VS Code, zsh |
+| `agents/`, `pi/` | Agent rules, skills, and pi setup |
+| `bin/` | One-off dock and wallpaper scripts |

@@ -1,10 +1,12 @@
-{ config, pkgs, user, ... }:
+{ config, pkgs, user, machine, ... }:
 let
   dotfiles = "${config.home.homeDirectory}/.dotfiles";
 in
 {
+  imports = [ ./agents.nix ];
+
   home.username = user;
-  home.homeDirectory = "/Users/${user}";
+  home.homeDirectory = machine.home;
   home.stateVersion = "24.11";
   home.packages = with pkgs; [
     # cli i use constantly
@@ -74,7 +76,7 @@ in
   };
 
   # Herdr
-   home.file.".config/herdr/config.toml" = {
+  home.file.".config/herdr/config.toml" = {
     source = config.lib.file.mkOutOfStoreSymlink "${dotfiles}/home/.config/herdr/config.toml";
     force = true;
   };

@@ -95,8 +95,6 @@ source $ZSH/oh-my-zsh.sh
 
 unalias nvim 2>/dev/null   # drop any stale alias so the nix-installed nvim is found
 
-export PATH=~/anaconda3/bin:$PATH
-# export PATH="/anaconda3/bin:$PATH"  # commented out by conda initialize
 
 # User configuration
 
@@ -122,40 +120,37 @@ alias nzsh="nvim ~/.zshrc"
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/Users/eduardo_morales/anaconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/Users/eduardo_morales/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/Users/eduardo_morales/anaconda3/etc/profile.d/conda.sh"
-    else
-        export PATH="/Users/eduardo_morales/anaconda3/bin:$PATH"
-    fi
+# Conda, when installed.
+if [ -x "$HOME/anaconda3/bin/conda" ]; then
+  eval "$("$HOME/anaconda3/bin/conda" shell.zsh hook 2> /dev/null)"
 fi
-unset __conda_setup
-# <<< conda initialize <<<
 
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/Users/eduardo_morales/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/eduardo_morales/Downloads/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '$HOME/Downloads/google-cloud-sdk/path.zsh.inc' ]; then . '$HOME/Downloads/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/Users/eduardo_morales/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/eduardo_morales/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '$HOME/Downloads/google-cloud-sdk/completion.zsh.inc' ]; then . '$HOME/Downloads/google-cloud-sdk/completion.zsh.inc'; fi
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-[ -f "/Users/eduardo_morales/.ghcup/env" ] && . "/Users/eduardo_morales/.ghcup/env"
+[ -f "$HOME/.ghcup/env" ] && . "$HOME/.ghcup/env"
 export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
 
 # The following configures our GOPATH to $PATH
 export PATH=$PATH:$(go env GOPATH)/bin
 
 # opencode
-export PATH=/Users/eduardo_morales/.opencode/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 
-# time-broker alias
-alias tb='time-broker'
+# Tools that may or may not be on this machine.
+export PATH="$HOME/.local/bin:$PATH"
+export HOMEBREW_NO_SANDBOX_CASK=1
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+[ -s "$HOME/.deno/env" ] && . "$HOME/.deno/env"
+
+# Machine-only settings (not in the repo): put them in ~/.zshrc.local.
+[ -f "$HOME/.zshrc.local" ] && . "$HOME/.zshrc.local"
 
 # Powerlevel10k instant prompt end. Should stay close to the bottom of ~/.zshrc.
 [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]] || return

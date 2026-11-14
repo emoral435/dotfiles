@@ -1,5 +1,7 @@
 # Project notes for agents
 
-Deliberate decisions in this repo - do NOT silently revert them:
-
-- `homebrew.onActivation.cleanup = "zap"` in `configuration.nix` is intentional. It forces the good habit of declaring every Homebrew package in the Nix config instead of installing things ad-hoc, which keeps the machine reproducible. Do not soften it to `uninstall` or `none`. Users are warned about its effect in README.md; this note is for anyone tempted to change the setting itself.
+- `dot` is the only entry point; users never type nix. Keep `README.md`, `dot help`, and `dot doctor` in step when you add a verb or a linked file.
+- This repo is public. Never commit work rules, company names, internal URLs, people, ids, or tokens. Work rules go in `~/.config/agents/work.md` on the work Mac.
+- `flake.nix` holds no user names: it reads `DOT_*` variables that `dot` sets from `~/.config/dotfiles/machine`.
+- `homebrew.onActivation.cleanup = "none"` in `configuration.nix` is deliberate: manual installs survive a rebuild.
+- Vendored third-party skills keep their license text in `agents/skills/LICENSES/`.
