@@ -22,7 +22,8 @@
     "mdb.mcp.server": "prompt",
     "workbench.activityBar.location": "hidden",
     "haskell.manageHLS": "GHCup",
-    "workbench.colorTheme": "Atom One Dark",
+    "workbench.colorTheme": "Solarized Light",
+    "window.autoDetectColorScheme": false,
     "explorer.confirmDelete": false,
     "go.lintFlags": [
         "[\"-c\", \"${workspaceFolder}/.golangci.yml\", \"--issues-exit-code=0\"]"
