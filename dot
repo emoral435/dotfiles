@@ -2,7 +2,7 @@
 # dot: set up this Mac, or bring it up to date. Run it with no arguments.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd -P)"
 LINK="$HOME/.dotfiles"
 STATE_DIR="$HOME/.config/dotfiles"
 MACHINE_FILE="$STATE_DIR/machine"
@@ -46,10 +46,12 @@ ensure_mac() {
 }
 
 ensure_nix() {
+  local dry_run="$1"
   if command -v nix >/dev/null 2>&1; then return; fi
   # shellcheck source=/dev/null
   [ -f "$NIX_PROFILE" ] && . "$NIX_PROFILE"
   if command -v nix >/dev/null 2>&1; then return; fi
+  [ "$dry_run" = no ] || die "Nix is not installed, so a dry run cannot build." "$REPO/dot   (installs Nix, then sets up this Mac)"
   say "Installing Nix (Determinate Systems installer, asks for your password)"
   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install --no-confirm
   # shellcheck source=/dev/null
@@ -116,18 +118,37 @@ repo_dirty() { [ -n "$(git -C "$REPO" status --porcelain)" ]; }
 has_upstream() { git -C "$REPO" rev-parse --abbrev-ref '@{upstream}' >/dev/null 2>&1; }
 
 # The repo is public. Words in ~/.config/dotfiles/private-words must never be pushed.
+# Checks the staged edit and every commit that is not on the upstream yet.
 check_private_words() {
   [ -s "$PRIVATE_WORDS" ] || return 0
   local hits
-  hits="$(git -C "$REPO" diff --cached | grep '^+' | grep -i -F -f "$PRIVATE_WORDS" || true)"
+  hits="$( { git -C "$REPO" diff --cached; git -C "$REPO" log -p --format= '@{upstream}..HEAD'; } \
+    | grep '^+' | grep -i -F -f "$PRIVATE_WORDS" || true)"
   [ -z "$hits" ] && return 0
   git -C "$REPO" reset -q
   printf '%s\n' "$hits" >&2
-  die "these lines hold words from $PRIVATE_WORDS, so dot will not push them." "move them to ~/.zshrc.local or ~/.config/agents/work.md, then run dot save"
+  die "these lines hold words from $PRIVATE_WORDS, so dot will not push them." "remove them (move them to ~/.zshrc.local or ~/.config/agents/work.md; for a saved commit: git -C $REPO reset @{upstream}), then run dot save"
+}
+
+unpushed_commits() {
+  has_upstream || return 1
+  git -C "$REPO" fetch -q || return 1
+  [ "$(git -C "$REPO" rev-list --count '@{upstream}..HEAD')" -gt 0 ]
+}
+
+push_saved() {
+  check_private_words
+  git -C "$REPO" pull -q --rebase \
+    || die "your edit and the other Mac's edit touch the same lines." "git -C $REPO status   (fix the conflict, then: git -C $REPO rebase --continue && dot)"
+  git -C "$REPO" push -q || die "git push failed (see above)." "dot save"
+  say "Saved and pushed."
 }
 
 cmd_save() {
-  if ! repo_dirty; then say "Nothing to save."; return 0; fi
+  if ! repo_dirty; then
+    if unpushed_commits; then say "Pushing saved commits"; push_saved; else say "Nothing to save."; fi
+    return 0
+  fi
   say "Changed in the repo:"
   git -C "$REPO" status --short
   if ! ask_yes "Commit and push these, so your other Mac gets them?"; then
@@ -138,10 +159,7 @@ cmd_save() {
   git -C "$REPO" add -A
   check_private_words
   git -C "$REPO" commit -q -m "chore: update from the ${DOT_KIND:-other} Mac"
-  git -C "$REPO" pull -q --rebase \
-    || die "your edit and the other Mac's edit touch the same lines." "git -C $REPO status   (fix the conflict, then: git -C $REPO rebase --continue && dot)"
-  git -C "$REPO" push -q || die "git push failed (see above)." "dot save"
-  say "Saved and pushed."
+  push_saved
 }
 
 pull_latest() {
@@ -157,6 +175,8 @@ pull_latest() {
 # --- Applying the config. ---
 
 ensure_link() {
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$REPO/dot" "$HOME/.local/bin/dot"
   [ "$(readlink "$LINK" 2>/dev/null)" = "$REPO" ] && return
   if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
     die "$LINK exists and is not a link to this repo." "mv $LINK $LINK.old && $REPO/dot"
@@ -229,10 +249,10 @@ ensure_work_overlay() {
 cmd_default() {
   local dry_run="$1"
   ensure_mac
-  ensure_nix
+  ensure_nix "$dry_run"
   load_machine "$dry_run"
   if [ "$dry_run" = no ]; then
-    repo_dirty && cmd_save
+    if repo_dirty || unpushed_commits; then cmd_save; fi
     pull_latest
   fi
   build_system
@@ -291,6 +311,7 @@ cmd_doctor() {
   fi
   ok "$(tr '\n' ' ' < "$MACHINE_FILE")"
   check_link "$LINK" "$REPO"
+  check_link "$HOME/.local/bin/dot" "$REPO/dot"
   if repo_dirty; then fix "the repo has edits your other Mac does not have" "dot save"; fi
 
   say "Config links (edit in place, the change lands in the repo)"
