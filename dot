@@ -175,9 +175,14 @@ pull_latest() {
     say "This branch has no upstream, so dot applies the local repo as it is."
     return
   fi
+  # No git stash: the stash list is shared by every worktree of a repo.
+  if repo_dirty; then
+    say "Not pulling: this Mac has unsaved edits. Applying the local repo. To get the other Mac's edits: dot save, then dot"
+    return
+  fi
   say "Pulling the latest from your other Mac"
-  git -C "$REPO" pull -q --rebase --autostash \
-    || die "the pull hit a conflict with your local edits." "git -C $REPO status   (fix it, then run dot)"
+  git -C "$REPO" pull -q --rebase \
+    || die "the pull hit a conflict with your saved edits." "git -C $REPO status   (fix it, then run dot)"
 }
 
 # --- Applying the config. ---
